@@ -24,11 +24,25 @@ pub struct Str {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Binary {
+    lhs: Box<Term>,
+    op: BinaryOp,
+    rhs: Box<Term>,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum BinaryOp {
+    Add,
+    Sub,
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(tag = "kind")]
 pub enum Term {
     Int(Int),
     Str(Str),
-    Print(Print)
+    Print(Print),
+    Binary(Binary),
 }
 #[derive(Debug)]
 pub enum Val {
@@ -53,15 +67,25 @@ fn eval(term: Term) -> Val {
             };
             Val::Void
         }
+        Term::Binary(bin) => match bin.op {
+            BinaryOp::Add => {
+                let lhs = eval(*bin.lhs);
+                let rhs = eval(*bin.rhs);
+
+                match (lhs, rhs) {
+                    (Val::Int(a), Val::Int(b)) => Val::Int(a + b),
+                    _ => panic!("Cannot add non-integers"),
+                }
+            },
+            BinaryOp::Sub => todo!(),
+        },
     }
 }
 
 fn main() {
-    let program = fs::read_to_string("./examples/hello.json").unwrap();
-    let program : File = serde_json::from_str::<File>(&program).unwrap();
-    
+    let program = fs::read_to_string("./examples/calc.json").unwrap();
+    let program: File = serde_json::from_str::<File>(&program).unwrap();
+
     let term = program.expression;
     eval(term);
-
-    
 }
