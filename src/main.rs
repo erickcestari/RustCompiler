@@ -75,6 +75,7 @@ pub struct Parameter {
 pub enum BinaryOp {
     Add,
     Sub,
+    Lt,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -144,6 +145,16 @@ fn eval(term: Term, scope: &mut Scope) -> Val {
                     _ => panic!("Cannot subtract non-integers"),
                 }
             }
+
+            BinaryOp::Lt => {
+                let lhs = eval(*bin.lhs, scope);
+                let rhs = eval(*bin.rhs, scope);
+
+                match (lhs, rhs) {
+                    (Val::Int(a), Val::Int(b)) => Val::Bool(a < b),
+                    _ => panic!("Cannot subtract non-integers"),
+                }
+            }
         },
         Term::If(i) => match eval(*i.condition, scope) {
             Val::Bool(true) => eval(*i.then, scope),
@@ -168,24 +179,21 @@ fn eval(term: Term, scope: &mut Scope) -> Val {
             env: scope.clone(),
         },
 
-        Term::Call(call) => {
-            match eval(*call.callee, scope) {
-                Val::Closure { body, params, env } => {
-                    let mut new_scope = scope.clone();
-                    for (param, arg) in params.into_iter().zip(call.arguments) {
-                        new_scope.insert(param.text, eval(arg, scope));
-                    }
-
-                    eval(body, &mut new_scope)
-                },
-                _ => panic!("Is not a fuction"),
+        Term::Call(call) => match eval(*call.callee, scope) {
+            Val::Closure { body, params, env } => {
+                let mut new_scope = scope.clone();
+                for (param, arg) in params.into_iter().zip(call.arguments) {
+                    new_scope.insert(param.text, eval(arg, scope));
+                }
+                eval(body, &mut new_scope)
             }
-        }
+            _ => panic!("Is not a fuction"),
+        },
     }
 }
 
 fn main() {
-    let program = fs::read_to_string("./examples/function.json").unwrap();
+    let program = fs::read_to_string("./examples/fib.json").unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
 
     let term = program.expression;
