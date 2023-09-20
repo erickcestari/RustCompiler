@@ -74,6 +74,9 @@ fn eval(term: Term) -> Val {
 
                 match (lhs, rhs) {
                     (Val::Int(a), Val::Int(b)) => Val::Int(a + b),
+                    (Val::Str(a), Val::Str(b)) => Val::Str(a + &b),
+                    (Val::Str(a), Val::Int(b)) => Val::Str(a + &b.to_string()),
+                    (Val::Int(a), Val::Str(b)) => Val::Str(a.to_string() + &b),
                     _ => panic!("Cannot add non-integers"),
                 }
             },
@@ -91,7 +94,7 @@ fn eval(term: Term) -> Val {
 }
 
 fn main() {
-    let program = fs::read_to_string("./examples/calc1.json").unwrap();
+    let program = fs::read_to_string("./examples/sumString.json").unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
 
     let term = program.expression;
