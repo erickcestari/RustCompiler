@@ -24,10 +24,22 @@ pub struct Str {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Bool {
+    value: bool,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Binary {
     lhs: Box<Term>,
     op: BinaryOp,
     rhs: Box<Term>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct If {
+    condition: Box<Term>,
+    then: Box<Term>,
+    otherwise: Box<Term>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +55,8 @@ pub enum Term {
     Str(Str),
     Print(Print),
     Binary(Binary),
+    Bool(Bool),
+    If(If)
 }
 #[derive(Debug)]
 pub enum Val {
@@ -56,6 +70,7 @@ fn eval(term: Term) -> Val {
     match term {
         Term::Int(number) => Val::Int(number.value),
         Term::Str(string) => Val::Str(string.value),
+        Term::Bool(bool) => Val::Bool(bool.value),
         Term::Print(print) => {
             let val = eval(*print.value);
 
@@ -74,9 +89,9 @@ fn eval(term: Term) -> Val {
 
                 match (lhs, rhs) {
                     (Val::Int(a), Val::Int(b)) => Val::Int(a + b),
-                    (Val::Str(a), Val::Str(b)) => Val::Str(a + &b),
-                    (Val::Str(a), Val::Int(b)) => Val::Str(a + &b.to_string()),
-                    (Val::Int(a), Val::Str(b)) => Val::Str(a.to_string() + &b),
+                    (Val::Str(s), Val::Str(b)) => Val::Str(format!("{s}{b}")),
+                    (Val::Str(s), Val::Int(b)) => Val::Str(format!("{s}{b}")),
+                    (Val::Int(a), Val::Str(b)) => Val::Str(format!("{a}{b}")),
                     _ => panic!("Cannot add non-integers"),
                 }
             },
@@ -90,11 +105,18 @@ fn eval(term: Term) -> Val {
                 }
             },
         },
+        Term::If(i) => {
+            match eval(*i.condition) {
+                Val::Bool(true) => eval(*i.then),
+                Val::Bool(false) => eval(*i.then),
+                _ => panic!("Invalid Condition")
+            }
+        }
     }
 }
 
 fn main() {
-    let program = fs::read_to_string("./examples/sumString.json").unwrap();
+    let program = fs::read_to_string("./examples/if.json").unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
 
     let term = program.expression;
