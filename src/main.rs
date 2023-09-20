@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, collections::HashMap};
 
 use serde::Deserialize;
 
@@ -43,6 +43,23 @@ pub struct If {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Let {
+    name: Parameter,
+    value: Box<Term>,
+    next: Box<Term>
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Var {
+    text: String
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Parameter {
+    text: String
+}
+
+#[derive(Debug, Deserialize)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -56,9 +73,11 @@ pub enum Term {
     Print(Print),
     Binary(Binary),
     Bool(Bool),
-    If(If)
+    If(If),
+    Let(Let),
+    Var(Var)
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Val {
     Void,
     Int(i32),
@@ -66,13 +85,15 @@ pub enum Val {
     Str(String),
 }
 
-fn eval(term: Term) -> Val {
+pub type Scope =   HashMap<String, Val>;
+
+fn eval(term: Term, scope: &mut Scope) -> Val {
     match term {
         Term::Int(number) => Val::Int(number.value),
         Term::Str(string) => Val::Str(string.value),
         Term::Bool(bool) => Val::Bool(bool.value),
         Term::Print(print) => {
-            let val = eval(*print.value);
+            let val = eval(*print.value, scope);
 
             match val {
                 Val::Int(n) => print!("{n}"),
@@ -84,8 +105,8 @@ fn eval(term: Term) -> Val {
         }
         Term::Binary(bin) => match bin.op {
             BinaryOp::Add => {
-                let lhs = eval(*bin.lhs);
-                let rhs = eval(*bin.rhs);
+                let lhs = eval(*bin.lhs, scope);
+                let rhs = eval(*bin.rhs, scope);
 
                 match (lhs, rhs) {
                     (Val::Int(a), Val::Int(b)) => Val::Int(a + b),
@@ -96,8 +117,8 @@ fn eval(term: Term) -> Val {
                 }
             },
             BinaryOp::Sub => {
-                let lhs = eval(*bin.lhs);
-                let rhs = eval(*bin.rhs);
+                let lhs = eval(*bin.lhs, scope);
+                let rhs = eval(*bin.rhs, scope);
 
                 match (lhs, rhs) {
                     (Val::Int(a), Val::Int(b)) => Val::Int(a - b),
@@ -106,19 +127,33 @@ fn eval(term: Term) -> Val {
             },
         },
         Term::If(i) => {
-            match eval(*i.condition) {
-                Val::Bool(true) => eval(*i.then),
-                Val::Bool(false) => eval(*i.otherwise),
+            match eval(*i.condition, scope) {
+                Val::Bool(true) => eval(*i.then, scope),
+                Val::Bool(false) => eval(*i.otherwise, scope),
                 _ => panic!("Invalid Condition")
+            }
+        },
+        Term::Let(l) => {
+            let name = l.name.text;
+            let value = eval(*l.value, scope);
+            scope.insert(name, value);
+            eval(*l.next, scope)
+        }
+
+        Term::Var(v) => {
+            match scope.get(&v.text) {
+                Some(val) => val.clone(),
+                None => panic!("Variable not found")
             }
         }
     }
 }
 
 fn main() {
-    let program = fs::read_to_string("./examples/if.json").unwrap();
+    let program = fs::read_to_string("./examples/let.json").unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
 
     let term = program.expression;
-    eval(term);
+    let mut scope = HashMap::new();
+    eval(term, &mut scope);
 }
