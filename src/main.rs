@@ -77,13 +77,21 @@ fn eval(term: Term) -> Val {
                     _ => panic!("Cannot add non-integers"),
                 }
             },
-            BinaryOp::Sub => todo!(),
+            BinaryOp::Sub => {
+                let lhs = eval(*bin.lhs);
+                let rhs = eval(*bin.rhs);
+
+                match (lhs, rhs) {
+                    (Val::Int(a), Val::Int(b)) => Val::Int(a - b),
+                    _ => panic!("Cannot subtract non-integers"),
+                }
+            },
         },
     }
 }
 
 fn main() {
-    let program = fs::read_to_string("./examples/calc.json").unwrap();
+    let program = fs::read_to_string("./examples/calc1.json").unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
 
     let term = program.expression;
