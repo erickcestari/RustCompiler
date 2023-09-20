@@ -57,7 +57,7 @@ pub struct Function {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Call {
-    calle: Box<Term>,
+    callee: Box<Term>,
     arguments: Vec<Term>,
 }
 
@@ -169,7 +169,7 @@ fn eval(term: Term, scope: &mut Scope) -> Val {
         },
 
         Term::Call(call) => {
-            match eval(*call.calle, scope) {
+            match eval(*call.callee, scope) {
                 Val::Closure { body, params, env } => {
                     let mut new_scope = scope.clone();
                     for (param, arg) in params.into_iter().zip(call.arguments) {
@@ -185,7 +185,7 @@ fn eval(term: Term, scope: &mut Scope) -> Val {
 }
 
 fn main() {
-    let program = fs::read_to_string("./examples/let.json").unwrap();
+    let program = fs::read_to_string("./examples/function.json").unwrap();
     let program: File = serde_json::from_str::<File>(&program).unwrap();
 
     let term = program.expression;
