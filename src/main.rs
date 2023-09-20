@@ -108,7 +108,7 @@ fn eval(term: Term) -> Val {
         Term::If(i) => {
             match eval(*i.condition) {
                 Val::Bool(true) => eval(*i.then),
-                Val::Bool(false) => eval(*i.then),
+                Val::Bool(false) => eval(*i.otherwise),
                 _ => panic!("Invalid Condition")
             }
         }
